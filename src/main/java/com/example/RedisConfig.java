@@ -1,6 +1,5 @@
 package com.example;
 
-import io.lettuce.core.resource.DefaultClientResources;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
@@ -9,20 +8,30 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 
-@Configuration
-public class RedisConfig {
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 
-    public static final int POOL_SIZE = 100;
+@Configuration
+class RedisConfig {
+
+    private static LettuceClientConfiguration lettuceClientConfiguration() {
+        ClusterClientOptions clientOptions =
+                ClusterClientOptions.builder()
+                                    .topologyRefreshOptions(
+                                            ClusterTopologyRefreshOptions.builder()
+                                                                         .enableAllAdaptiveRefreshTriggers()
+                                                                         .build())
+                                    .build();
+        return LettuceClientConfiguration.builder()
+                                 .clientOptions(clientOptions)
+                                 .build();
+    }
 
     @Bean
     RedisConnectionFactory redisConnectionFactory() {
         RedisClusterConfiguration clusterConfiguration = new RedisClusterConfiguration();
         clusterConfiguration.clusterNode("0.0.0.0", 7000);
-        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
-                .clientResources(DefaultClientResources.builder().ioThreadPoolSize(POOL_SIZE).computationThreadPoolSize(POOL_SIZE).build())
-                .build();
-//        return new LettuceConnectionFactory(clusterConfiguration, clientConfig);
-        return new LettuceConnectionFactory(clusterConfiguration);
+        return new LettuceConnectionFactory(clusterConfiguration, lettuceClientConfiguration());
     }
 
     @Bean
